@@ -310,29 +310,40 @@ namespace FreshFarm {
 				Decimal todayRevenue = Convert::ToDecimal(todaySalesObj);
 				int lowStockCount = Convert::ToInt32(lowStockObj);
 
-				// Create a FlowLayoutPanel for cards with proper sizing
-				FlowLayoutPanel^ cardsPanel = gcnew FlowLayoutPanel();
+				// Create stat cards using TableLayoutPanel for precise layout
+				// Calculate equal width for 4 cards with spacing
+				int totalMargins = 16 * 5;  // Left/right padding (16) + 4 inter-card margins (6 each = 24, but first has none, last has none = 5 margins of 6 = 30, but accounting for container margin)
+				int availableWidth = contentPanel->ClientSize.Width - 40;  // 20px padding on each side
+				int cardWidth = (availableWidth - 24) / 4;  // 24px for margins between 4 cards
+				if (cardWidth < 140) cardWidth = 140;  // Minimum width
+
+				// Create TableLayoutPanel for 4 cards in one row
+				TableLayoutPanel^ cardsPanel = gcnew TableLayoutPanel();
 				cardsPanel->BackColor = ColorOffWhite;
 				cardsPanel->Dock = DockStyle::Top;
+				cardsPanel->Height = 165;
 				cardsPanel->AutoSize = false;
-				cardsPanel->Height = 170;
+				cardsPanel->ColumnCount = 4;
+				cardsPanel->RowCount = 1;
 				cardsPanel->Padding = System::Windows::Forms::Padding(0);
-				cardsPanel->Margin = System::Windows::Forms::Padding(0);
-				cardsPanel->WrapContents = true;
+				cardsPanel->Margin = System::Windows::Forms::Padding(0, 0, 0, 24);  // 24px space below cards
+				cardsPanel->GrowStyle = TableLayoutPanelGrowStyle::FixedSize;
 
-				// Create stat cards with responsive sizing
-				int cardWidth = (contentPanel->ClientSize.Width - 24) / 4;
-				if (cardWidth < 180) cardWidth = 180;  // Minimum width
+				// Set equal column widths
+				for (int i = 0; i < 4; i++) {
+					cardsPanel->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 25.0f));
+				}
+				cardsPanel->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
 
-				Panel^ card1 = CreateStatCard("Total Plants", String::Format("{0}", plantCount), ColorActionGreen, cardWidth);
-				Panel^ card2 = CreateStatCard("Categories", String::Format("{0}", categoryCount), ColorForestGreen, cardWidth);
-				Panel^ card3 = CreateStatCard("Today's Revenue", String::Format("Rs. {0:0.00}", todayRevenue), ColorLightGreen, cardWidth);
-				Panel^ card4 = CreateStatCard("Low Stock Items", String::Format("{0}", lowStockCount), ColorError, cardWidth);
+				Panel^ card1 = CreateStatCard("Total Plants", String::Format("{0}", plantCount), ColorActionGreen);
+				Panel^ card2 = CreateStatCard("Categories", String::Format("{0}", categoryCount), ColorForestGreen);
+				Panel^ card3 = CreateStatCard("Today's Revenue", String::Format("Rs. {0:0.00}", todayRevenue), ColorLightGreen);
+				Panel^ card4 = CreateStatCard("Low Stock Items", String::Format("{0}", lowStockCount), ColorError);
 
-				cardsPanel->Controls->Add(card1);
-				cardsPanel->Controls->Add(card2);
-				cardsPanel->Controls->Add(card3);
-				cardsPanel->Controls->Add(card4);
+				cardsPanel->Controls->Add(card1, 0, 0);
+				cardsPanel->Controls->Add(card2, 1, 0);
+				cardsPanel->Controls->Add(card3, 2, 0);
+				cardsPanel->Controls->Add(card4, 3, 0);
 
 				contentPanel->Controls->Add(cardsPanel);
 
@@ -392,30 +403,48 @@ namespace FreshFarm {
 			}
 		}
 
-		Panel^ CreateStatCard(String^ title, String^ value, Color bgColor, int width) {
+		Panel^ CreateStatCard(String^ title, String^ value, Color bgColor) {
 			Panel^ card = gcnew Panel();
 			card->BackColor = bgColor;
 			card->Padding = System::Windows::Forms::Padding(12);
 			card->Margin = System::Windows::Forms::Padding(6);
-			card->Width = width;
-			card->Height = 120;
+			card->Dock = DockStyle::Fill;
+			card->Height = 145;
+
+			// Use TableLayoutPanel for title and value with proper spacing
+			TableLayoutPanel^ cardLayout = gcnew TableLayoutPanel();
+			cardLayout->Dock = DockStyle::Fill;
+			cardLayout->BackColor = bgColor;
+			cardLayout->RowCount = 2;
+			cardLayout->ColumnCount = 1;
+			cardLayout->Padding = System::Windows::Forms::Padding(0);
+			cardLayout->Margin = System::Windows::Forms::Padding(0);
+			cardLayout->GrowStyle = TableLayoutPanelGrowStyle::FixedSize;
+
+			// Row 0: Title (Auto height)
+			cardLayout->RowStyles->Add(gcnew RowStyle(SizeType::AutoSize));
+			// Row 1: Value (Fill remaining space)
+			cardLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
+			cardLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
 
 			Label^ titleLabel = gcnew Label();
 			titleLabel->Text = title;
 			titleLabel->ForeColor = ColorWhite;
 			titleLabel->Font = gcnew Drawing::Font("Segoe UI", 10);
-			titleLabel->AutoSize = true;
-			titleLabel->Dock = DockStyle::Top;
-			card->Controls->Add(titleLabel);
+			titleLabel->Dock = DockStyle::Fill;
+			titleLabel->Margin = System::Windows::Forms::Padding(0, 0, 0, 8);
+			cardLayout->Controls->Add(titleLabel, 0, 0);
 
 			Label^ valueLabel = gcnew Label();
 			valueLabel->Text = value;
 			valueLabel->ForeColor = ColorWhite;
-			valueLabel->Font = gcnew Drawing::Font("Segoe UI Semibold", 20, FontStyle::Bold);
-			valueLabel->AutoSize = true;
-			valueLabel->Dock = DockStyle::Top;
-			card->Controls->Add(valueLabel);
+			valueLabel->Font = gcnew Drawing::Font("Segoe UI Semibold", 22, FontStyle::Bold);
+			valueLabel->Dock = DockStyle::Fill;
+			valueLabel->AutoSize = false;
+			valueLabel->TextAlign = ContentAlignment::BottomLeft;
+			cardLayout->Controls->Add(valueLabel, 0, 1);
 
+			card->Controls->Add(cardLayout);
 			return card;
 		}
 
