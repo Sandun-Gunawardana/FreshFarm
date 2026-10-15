@@ -28,16 +28,20 @@ namespace FreshFarm {
 		Color ColorGridLine;          // Similar to border
 		Color ColorSelectionLight;    // #DBE7E2 (219, 231, 226) - Light selection
 
-		// Root layout panel
+		// Root layout structure
 		TableLayoutPanel^ rootLayout;
+		Panel^ mainContentHost;
+		Panel^ pageContentPanel;
+		Panel^ contentPanel;  // Alias for pageContentPanel for backward compatibility
 
 		// Sales form controls (for event handling)
 		ComboBox^ salesPlantCombo;
 		NumericUpDown^ salesQtyControl;
-		ComboBox^ salesPaymentCombo;		// UI Layout
+		ComboBox^ salesPaymentCombo;
+
+		// UI Layout
 		Panel^ sidebar;
 		Panel^ headerPanel;
-		Panel^ contentPanel;
 		Label^ pageTitle;
 		Label^ pageSubtitle;
 
@@ -91,8 +95,9 @@ namespace FreshFarm {
 			this->Font = gcnew Drawing::Font("Segoe UI", 10);
 			this->ShowIcon = false;
 
-			// Create UI hierarchy using direct docking (simpler and more reliable)
-			CreateSidebar();
+			// Create UI hierarchy: root layout first (creates sidebar, header, content panel)
+			CreateRootLayout();
+			// Old methods now redundant but called for safety
 			CreateHeader();
 			CreateContentPanel();
 
@@ -111,30 +116,103 @@ namespace FreshFarm {
 		}
 
 	private:
+		void CreateRootLayout() {
+			// Create root TableLayoutPanel with 2 columns: [180px sidebar] [Fill content]
+			rootLayout = gcnew TableLayoutPanel();
+			rootLayout->Dock = DockStyle::Fill;
+			rootLayout->ColumnCount = 2;
+			rootLayout->RowCount = 1;
+			rootLayout->Padding = System::Windows::Forms::Padding(0);
+			rootLayout->Margin = System::Windows::Forms::Padding(0);
+			rootLayout->AutoSize = false;
+
+			// Column style 0: Sidebar - fixed 180 pixels
+			rootLayout->ColumnStyles->Clear();
+			rootLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Absolute, 180.0f));
+			// Column style 1: Main content - fill remaining
+			rootLayout->ColumnStyles->Add(gcnew ColumnStyle(SizeType::Percent, 100.0f));
+
+			// Row style 0: Full height
+			rootLayout->RowStyles->Clear();
+			rootLayout->RowStyles->Add(gcnew RowStyle(SizeType::Percent, 100.0f));
+
+			this->Controls->Add(rootLayout);
+
+			// Create sidebar and add to column 0
+			CreateSidebar();
+			rootLayout->Controls->Add(sidebar, 0, 0);
+
+			// Create main content host in column 1
+			mainContentHost = gcnew Panel();
+			mainContentHost->BackColor = ColorOffWhite;
+			mainContentHost->Dock = DockStyle::Fill;
+			mainContentHost->Padding = System::Windows::Forms::Padding(0);
+			mainContentHost->Margin = System::Windows::Forms::Padding(0);
+			rootLayout->Controls->Add(mainContentHost, 1, 0);
+
+			// Create header panel inside main content host
+			headerPanel = gcnew Panel();
+			headerPanel->BackColor = ColorWhite;
+			headerPanel->Dock = DockStyle::Top;
+			headerPanel->Height = 80;
+			headerPanel->Padding = System::Windows::Forms::Padding(20);
+			headerPanel->Margin = System::Windows::Forms::Padding(0);
+			mainContentHost->Controls->Add(headerPanel);
+
+			// Page title
+			pageTitle = gcnew Label();
+			pageTitle->Text = "Dashboard";
+			pageTitle->Font = gcnew Drawing::Font("Segoe UI Semibold", 22, FontStyle::Bold);
+			pageTitle->ForeColor = ColorTextDark;
+			pageTitle->AutoSize = true;
+			pageTitle->Dock = DockStyle::Top;
+			headerPanel->Controls->Add(pageTitle);
+
+			// Page subtitle
+			pageSubtitle = gcnew Label();
+			pageSubtitle->Text = "Overview of store activity";
+			pageSubtitle->Font = gcnew Drawing::Font("Segoe UI", 10);
+			pageSubtitle->ForeColor = ColorTextMuted;
+			pageSubtitle->AutoSize = true;
+			pageSubtitle->Dock = DockStyle::Top;
+			headerPanel->Controls->Add(pageSubtitle);
+
+			// Create page content panel inside main content host, below header
+			pageContentPanel = gcnew Panel();
+			pageContentPanel->BackColor = ColorOffWhite;
+			pageContentPanel->Dock = DockStyle::Fill;
+			pageContentPanel->Padding = System::Windows::Forms::Padding(0, 20, 20, 20);
+			pageContentPanel->Margin = System::Windows::Forms::Padding(0);
+			pageContentPanel->AutoScroll = true;
+			mainContentHost->Controls->Add(pageContentPanel);
+
+			// contentPanel is an alias for pageContentPanel for backward compatibility
+			contentPanel = pageContentPanel;
+		}
+
 		void CreateSidebar() {
 			sidebar = gcnew Panel();
 			sidebar->BackColor = ColorForestGreen;
-			sidebar->Dock = DockStyle::Left;
-			sidebar->Width = 240;
+			sidebar->Dock = DockStyle::Fill;
 			sidebar->Padding = System::Windows::Forms::Padding(0);
 			sidebar->Margin = System::Windows::Forms::Padding(0);
-			this->Controls->Add(sidebar);
+			// Will be added to rootLayout column 0, not to main form directly
 
 			// Brand header
 			Label^ brandLabel = gcnew Label();
 			brandLabel->Text = "FRESH\nFARM";
 			brandLabel->ForeColor = ColorWhite;
-			brandLabel->Font = gcnew Drawing::Font("Segoe UI", 16, FontStyle::Bold);
+			brandLabel->Font = gcnew Drawing::Font("Segoe UI", 14, FontStyle::Bold);
 			brandLabel->TextAlign = ContentAlignment::TopCenter;
-			brandLabel->Location = Point(16, 20);
-			brandLabel->Size = Drawing::Size(208, 84);
+			brandLabel->Location = Point(8, 20);
+			brandLabel->Size = Drawing::Size(164, 84);
 			sidebar->Controls->Add(brandLabel);
 
 			// Create navigation buttons
 			int navTop = 120;
-			const int buttonHeight = 48;
-			const int buttonMargin = 8;
-			const int buttonWidth = 208;
+			const int buttonHeight = 44;
+			const int buttonMargin = 6;
+			const int buttonWidth = 164;
 
 			btnDashboard = CreateNavButton("Dashboard", navTop);
 			navTop += buttonHeight + buttonMargin;
@@ -159,8 +237,8 @@ namespace FreshFarm {
 			// Logout button at bottom
 			btnLogout = gcnew Button();
 			btnLogout->Text = "Sign Out";
-			btnLogout->Size = Drawing::Size(208, 44);
-			btnLogout->Location = Point(16, sidebar->ClientSize.Height - 56);
+			btnLogout->Size = Drawing::Size(164, 44);
+			btnLogout->Location = Point(8, sidebar->ClientSize.Height - 56);
 			btnLogout->Anchor = AnchorStyles::Bottom | AnchorStyles::Left;
 			btnLogout->BackColor = ColorError;
 			btnLogout->ForeColor = ColorWhite;
@@ -175,8 +253,8 @@ namespace FreshFarm {
 		Button^ CreateNavButton(String^ text, int top) {
 			Button^ btn = gcnew Button();
 			btn->Text = text;
-			btn->Location = Point(16, top);
-			btn->Size = Drawing::Size(208, 44);
+			btn->Location = Point(8, top);
+			btn->Size = Drawing::Size(164, 44);
 			btn->BackColor = ColorForestGreen;
 			btn->ForeColor = Color::FromArgb(224, 240, 230);
 			btn->FlatStyle = FlatStyle::Flat;
@@ -188,39 +266,14 @@ namespace FreshFarm {
 		}
 
 		void CreateHeader() {
-			headerPanel = gcnew Panel();
-			headerPanel->BackColor = ColorWhite;
-			headerPanel->Dock = DockStyle::Top;
-			headerPanel->Height = 80;
-			headerPanel->Padding = System::Windows::Forms::Padding(20);
-			headerPanel->Margin = System::Windows::Forms::Padding(0);
-			this->Controls->Add(headerPanel);
-
-			pageTitle = gcnew Label();
-			pageTitle->Text = "Dashboard";
-			pageTitle->Font = gcnew Drawing::Font("Segoe UI Semibold", 22, FontStyle::Bold);
-			pageTitle->ForeColor = ColorTextDark;
-			pageTitle->AutoSize = true;
-			pageTitle->Dock = DockStyle::Top;
-			headerPanel->Controls->Add(pageTitle);
-
-			pageSubtitle = gcnew Label();
-			pageSubtitle->Text = "Overview of store activity";
-			pageSubtitle->Font = gcnew Drawing::Font("Segoe UI", 10);
-			pageSubtitle->ForeColor = ColorTextMuted;
-			pageSubtitle->AutoSize = true;
-			pageSubtitle->Dock = DockStyle::Top;
-			headerPanel->Controls->Add(pageSubtitle);
+			// Header creation is now handled in CreateRootLayout
+			// This method is kept for backward compatibility but does nothing
 		}
 
 		void CreateContentPanel() {
-			contentPanel = gcnew Panel();
-			contentPanel->BackColor = ColorOffWhite;
-			contentPanel->Dock = DockStyle::Fill;
-			contentPanel->Padding = System::Windows::Forms::Padding(20);
-			contentPanel->Margin = System::Windows::Forms::Padding(0);
-			contentPanel->AutoScroll = true;
-			this->Controls->Add(contentPanel);
+			// Page content panel creation is now handled in CreateRootLayout
+			// contentPanel is set as an alias to pageContentPanel
+			// This method is kept for backward compatibility but does nothing
 		}
 
 		void OnFormResize(Object^ sender, EventArgs^ e) {
@@ -1101,8 +1154,9 @@ namespace FreshFarm {
 			historyLabel->Text = "Recent Sales";
 			historyLabel->Font = gcnew Drawing::Font("Segoe UI Semibold", 11, FontStyle::Bold);
 			historyLabel->ForeColor = ColorTextDark;
-			historyLabel->AutoSize = true;
-			historyLabel->Margin = System::Windows::Forms::Padding(0, 12, 0, 8);
+			historyLabel->AutoSize = false;
+			historyLabel->Height = 36;
+			historyLabel->Margin = System::Windows::Forms::Padding(0, 8, 0, 0);
 			historyLabel->Dock = DockStyle::Top;
 			contentPanel->Controls->Add(historyLabel);
 
@@ -1122,6 +1176,7 @@ namespace FreshFarm {
 			salesHistoryGrid->DefaultCellStyle->SelectionBackColor = ColorSelectionLight;
 			salesHistoryGrid->DefaultCellStyle->SelectionForeColor = ColorTextDark;
 			salesHistoryGrid->Dock = DockStyle::Fill;
+			salesHistoryGrid->Margin = System::Windows::Forms::Padding(0);
 			contentPanel->Controls->Add(salesHistoryGrid);
 
 			try {
